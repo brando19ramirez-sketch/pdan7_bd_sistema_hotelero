@@ -1,0 +1,708 @@
+-- ============================================================
+--  20 CONSULTAS TRANSACT-SQL
+--  Sistema de Gestión de Reservas y Operaciones Hoteleras
+--  HospedaPerú
+-- ============================================================
+
+
+-- ════════════════════════════════════════════════════════════
+--  BLOQUE 1 — CONSULTAS BÁSICAS E INTERMEDIAS (1 al 10)
+-- ════════════════════════════════════════════════════════════
+
+-- ------------------------------------------------------------
+-- 01. BÁSICA — Listar todos los huéspedes registrados
+--     Objetivo: Ver nombre completo, tipo de documento y contacto
+--     de todos los huéspedes ordenados alfabéticamente.
+-- ------------------------------------------------------------
+SELECT
+    id_huesped,
+    tipo_huesped,
+    tipo_documento,
+    numero_documento,
+    COALESCE(nombres + ' ' + apellidos, nombres) AS nombre_completo,
+    email,
+    telefono,
+    nacionalidad
+FROM huespedes
+ORDER BY nombres ASC;
+
+
+-- ------------------------------------------------------------
+-- 02. BÁSICA — Habitaciones disponibles en un hotel específico
+--     Objetivo: Saber qué habitaciones están libres ahora mismo
+--     en el hotel de Lima Centro (id_hotel = 1).
+-- ------------------------------------------------------------
+SELECT
+    h.id_habitacion,
+    h.numero_habitacion,
+    h.piso,
+    h.estado,
+    th.nombre        AS tipo_habitacion,
+    th.precio_base_noche,
+    th.capacidad_max_personas
+FROM habitaciones h
+INNER JOIN tipos_habitacion th ON h.id_tipo_habitacion = th.id_tipo_habitacion
+WHERE h.id_hotel = 1
+  AND h.estado = 'disponible'
+ORDER BY h.piso, h.numero_habitacion;
+
+
+-- ------------------------------------------------------------
+-- 03. BÁSICA — Reservas con estado 'confirmada' en el año 2026
+--     Objetivo: Listar reservas activas con datos del huésped
+--     y fechas de estadía.
+-- ------------------------------------------------------------
+SELECT
+    r.id_reserva,
+    COALESCE(h.nombres + ' ' + h.apellidos, h.nombres) AS huesped,
+    r.fecha_entrada,
+    r.fecha_salida,
+    DATEDIFF(DAY, r.fecha_entrada, r.fecha_salida)      AS noches,
+    r.nro_personas,
+    r.canal_reserva,
+    r.estado
+FROM reservas r
+INNER JOIN huespedes h ON r.id_huesped = h.id_huesped
+WHERE r.estado = 'confirmada'
+  AND YEAR(r.fecha_entrada) = 2026
+ORDER BY r.fecha_entrada;
+
+
+-- ------------------------------------------------------------
+-- 04. BÁSICA — Servicios ordenados por precio de mayor a menor
+--     Objetivo: Ver el catálogo de servicios con su categoría
+--     y precio para referencia del personal.
+-- ------------------------------------------------------------
+SELECT
+    id_servicio,
+    nombre,
+    categoria,
+    descripcion,
+    precio_unitario
+FROM servicios
+ORDER BY precio_unitario DESC;
+
+
+-- ------------------------------------------------------------
+-- 05. BÁSICA — Total facturado por cada reserva
+--     Objetivo: Ver el desglose económico de cada factura
+--     con subtotales, descuentos e IGV aplicado.
+-- ------------------------------------------------------------
+SELECT
+    f.id_factura,
+    f.id_reserva,
+    COALESCE(h.nombres + ' ' + h.apellidos, h.nombres) AS huesped,
+    f.fecha_emision,
+    f.subtotal_habitacion,
+    f.subtotal_servicios,
+    f.descuentos,
+    f.igv,
+    f.monto_total
+FROM facturas f
+INNER JOIN reservas r  ON f.id_reserva  = r.id_reserva
+INNER JOIN huespedes h ON r.id_huesped  = h.id_huesped
+ORDER BY f.monto_total DESC;
+
+
+-- ------------------------------------------------------------
+-- 06. INTERMEDIA — Reservas con múltiples pagos (pagos en partes)
+--     Objetivo: Identificar qué facturas recibieron más de un
+--     pago, mostrando el total cobrado vs monto de la factura.
+-- ------------------------------------------------------------
+SELECT
+    f.id_factura,
+    f.id_reserva,
+    f.monto_total                        AS total_factura,
+    COUNT(p.id_pago)                     AS cantidad_pagos,
+    SUM(p.monto)                         AS total_cobrado,
+    f.monto_total - SUM(p.monto)         AS saldo_pendiente
+FROM facturas f
+INNER JOIN pagos p ON f.id_factura = p.id_factura
+GROUP BY f.id_factura, f.id_reserva, f.monto_total
+HAVING COUNT(p.id_pago) > 1
+ORDER BY cantidad_pagos DESC;
+
+
+-- ------------------------------------------------------------
+-- 07. INTERMEDIA — Consumo de servicios por reserva con su total
+--     Objetivo: Ver cuánto gastó cada reserva en servicios
+--     adicionales, agrupado y con detalle de categorías.
+-- ------------------------------------------------------------
+SELECT
+    cs.id_reserva,
+    COALESCE(h.nombres + ' ' + h.apellidos, h.nombres) AS huesped,
+    s.categoria,
+    COUNT(cs.id_consumo)                 AS veces_consumido,
+    SUM(cs.monto_total)                  AS gasto_categoria
+FROM consumos_servicios cs
+INNER JOIN servicios  s ON cs.id_servicio = s.id_servicio
+INNER JOIN reservas   r ON cs.id_reserva  = r.id_reserva
+INNER JOIN huespedes  h ON r.id_huesped   = h.id_huesped
+GROUP BY cs.id_reserva, h.nombres, h.apellidos, s.categoria
+ORDER BY cs.id_reserva, gasto_categoria DESC;
+
+
+-- ------------------------------------------------------------
+-- 08. INTERMEDIA — Huéspedes con más de una reserva (fidelización)
+--     Objetivo: Identificar clientes recurrentes mostrando
+--     cuántas veces se hospedaron y cuánto gastaron en total.
+-- ------------------------------------------------------------
+SELECT
+    h.id_huesped,
+    COALESCE(h.nombres + ' ' + h.apellidos, h.nombres) AS huesped,
+    h.email,
+    COUNT(r.id_reserva)                  AS total_reservas,
+    SUM(f.monto_total)                   AS gasto_total,
+    AVG(f.monto_total)                   AS gasto_promedio,
+    MAX(r.fecha_entrada)                 AS ultima_visita
+FROM huespedes  h
+INNER JOIN reservas  r ON h.id_huesped  = r.id_huesped
+INNER JOIN facturas  f ON r.id_reserva  = f.id_reserva
+GROUP BY h.id_huesped, h.nombres, h.apellidos, h.email
+HAVING COUNT(r.id_reserva) > 1
+ORDER BY total_reservas DESC, gasto_total DESC;
+
+
+-- ------------------------------------------------------------
+-- 09. INTERMEDIA — Ocupación de habitaciones por hotel y tipo
+--     Objetivo: Ver cuántas noches se ocupó cada tipo de
+--     habitación en cada hotel para análisis de demanda.
+-- ------------------------------------------------------------
+SELECT
+    ho.nombre                            AS hotel,
+    ho.ciudad,
+    th.nombre                            AS tipo_habitacion,
+    th.precio_base_noche,
+    COUNT(rh.id_reserva_habitacion)      AS total_reservas,
+    SUM(rh.nro_noches)                   AS total_noches_vendidas,
+    SUM(rh.precio_total)                 AS ingreso_generado
+FROM reserva_habitaciones rh
+INNER JOIN habitaciones    ha ON rh.id_habitacion      = ha.id_habitacion
+INNER JOIN tipos_habitacion th ON ha.id_tipo_habitacion = th.id_tipo_habitacion
+INNER JOIN hoteles          ho ON ha.id_hotel           = ho.id_hotel
+GROUP BY ho.nombre, ho.ciudad, th.nombre, th.precio_base_noche
+ORDER BY ho.nombre, ingreso_generado DESC;
+
+
+-- ------------------------------------------------------------
+-- 10. INTERMEDIA — Puntaje promedio de satisfacción por hotel
+--     Objetivo: Comparar la calidad percibida entre hoteles
+--     usando las encuestas de satisfacción completadas.
+-- ------------------------------------------------------------
+SELECT
+    ho.nombre                            AS hotel,
+    ho.ciudad,
+    COUNT(sa.id_satisfaccion)            AS encuestas_completadas,
+    ROUND(AVG(CAST(sa.limpieza_puntaje      AS FLOAT)), 2) AS avg_limpieza,
+    ROUND(AVG(CAST(sa.atencion_puntaje      AS FLOAT)), 2) AS avg_atencion,
+    ROUND(AVG(CAST(sa.instalaciones_puntaje AS FLOAT)), 2) AS avg_instalaciones,
+    ROUND(AVG(CAST(sa.limpieza_puntaje + sa.atencion_puntaje
+              + sa.instalaciones_puntaje AS FLOAT) / 3), 2) AS puntaje_general
+FROM satisfaccion sa
+INNER JOIN reservas           r  ON sa.id_reserva   = r.id_reserva
+INNER JOIN reserva_habitaciones rh ON r.id_reserva  = rh.id_reserva
+INNER JOIN habitaciones        ha ON rh.id_habitacion = ha.id_habitacion
+INNER JOIN hoteles             ho ON ha.id_hotel      = ho.id_hotel
+GROUP BY ho.nombre, ho.ciudad
+ORDER BY puntaje_general DESC;
+
+
+-- ════════════════════════════════════════════════════════════
+--  BLOQUE 2 — CONSULTAS AVANZADAS Y EXPERTAS (11 al 20)
+-- ════════════════════════════════════════════════════════════
+
+-- ------------------------------------------------------------
+-- 11. AVANZADA — Ranking de habitaciones más rentables con ROI
+--     Usa: ROW_NUMBER(), CTEs, cálculo de rentabilidad
+--     Objetivo: Identificar qué habitaciones generan más ingreso
+--     ponderado por el precio base, para decisiones de pricing.
+-- ------------------------------------------------------------
+WITH ingresos_habitacion AS (
+    SELECT
+        ha.id_habitacion,
+        ha.numero_habitacion,
+        ha.piso,
+        ho.nombre                        AS hotel,
+        th.nombre                        AS tipo,
+        th.precio_base_noche,
+        COUNT(rh.id_reserva_habitacion)  AS veces_ocupada,
+        SUM(rh.nro_noches)               AS total_noches,
+        SUM(rh.precio_total)             AS ingreso_real
+    FROM habitaciones        ha
+    INNER JOIN hoteles          ho ON ha.id_hotel           = ho.id_hotel
+    INNER JOIN tipos_habitacion th ON ha.id_tipo_habitacion = th.id_tipo_habitacion
+    LEFT  JOIN reserva_habitaciones rh ON ha.id_habitacion  = rh.id_habitacion
+    GROUP BY ha.id_habitacion, ha.numero_habitacion, ha.piso,
+             ho.nombre, th.nombre, th.precio_base_noche
+),
+ranking AS (
+    SELECT *,
+        ROUND(ingreso_real / NULLIF(precio_base_noche, 0), 2)   AS factor_rendimiento,
+        ROW_NUMBER() OVER (PARTITION BY hotel ORDER BY ingreso_real DESC) AS rank_hotel
+    FROM ingresos_habitacion
+)
+SELECT
+    rank_hotel    AS posicion,
+    hotel,
+    numero_habitacion,
+    tipo,
+    precio_base_noche,
+    veces_ocupada,
+    total_noches,
+    ingreso_real,
+    factor_rendimiento
+FROM ranking
+WHERE rank_hotel <= 3
+ORDER BY hotel, rank_hotel;
+
+
+-- ------------------------------------------------------------
+-- 12. AVANZADA — Análisis de cancelaciones y no-shows por mes
+--     Usa: FORMAT, GROUP BY mes, tasas porcentuales, CASE
+--     Objetivo: Detectar meses con alta tasa de cancelación
+--     para ajustar política de reservas y depósitos.
+-- ------------------------------------------------------------
+SELECT
+    FORMAT(r.fecha_creacion, 'yyyy-MM')          AS mes,
+    COUNT(*)                                      AS total_reservas,
+    SUM(CASE WHEN r.estado = 'confirmada'  THEN 1 ELSE 0 END) AS confirmadas,
+    SUM(CASE WHEN r.estado = 'cancelada'   THEN 1 ELSE 0 END) AS canceladas,
+    SUM(CASE WHEN r.estado = 'no-show'     THEN 1 ELSE 0 END) AS no_shows,
+    ROUND(100.0 * SUM(CASE WHEN r.estado = 'cancelada' THEN 1 ELSE 0 END)
+          / NULLIF(COUNT(*), 0), 1)               AS pct_cancelacion,
+    ROUND(100.0 * SUM(CASE WHEN r.estado = 'no-show'   THEN 1 ELSE 0 END)
+          / NULLIF(COUNT(*), 0), 1)               AS pct_no_show,
+    SUM(CASE WHEN r.estado IN ('cancelada','no-show')
+             THEN rh.precio_total ELSE 0 END)     AS ingreso_perdido
+FROM reservas r
+LEFT JOIN reserva_habitaciones rh ON r.id_reserva = rh.id_reserva
+GROUP BY FORMAT(r.fecha_creacion, 'yyyy-MM')
+ORDER BY mes;
+
+
+-- ------------------------------------------------------------
+-- 13. AVANZADA — Segmentación de huéspedes por valor de vida (LTV)
+--     Usa: CTEs encadenados, NTILE, clasificación automática
+--     Objetivo: Clasificar huéspedes en segmentos Gold/Silver/
+--     Bronze según gasto total para estrategias de fidelización.
+-- ------------------------------------------------------------
+WITH gasto_por_huesped AS (
+    SELECT
+        h.id_huesped,
+        COALESCE(h.nombres + ' ' + h.apellidos, h.nombres) AS huesped,
+        h.email,
+        h.nacionalidad,
+        COUNT(DISTINCT r.id_reserva)     AS total_reservas,
+        SUM(f.monto_total)               AS gasto_total,
+        AVG(DATEDIFF(DAY, r.fecha_entrada, r.fecha_salida)) AS estadia_promedio_dias
+    FROM huespedes  h
+    INNER JOIN reservas  r ON h.id_huesped  = r.id_huesped
+    INNER JOIN facturas  f ON r.id_reserva  = f.id_reserva
+    WHERE r.estado = 'confirmada'
+    GROUP BY h.id_huesped, h.nombres, h.apellidos, h.email, h.nacionalidad
+),
+segmentado AS (
+    SELECT *,
+        NTILE(3) OVER (ORDER BY gasto_total DESC) AS segmento_num
+    FROM gasto_por_huesped
+)
+SELECT
+    huesped,
+    email,
+    nacionalidad,
+    total_reservas,
+    gasto_total,
+    estadia_promedio_dias,
+    CASE segmento_num
+        WHEN 1 THEN 'GOLD   — Cliente VIP'
+        WHEN 2 THEN 'SILVER — Cliente frecuente'
+        WHEN 3 THEN 'BRONZE — Cliente ocasional'
+    END AS segmento
+FROM segmentado
+ORDER BY gasto_total DESC;
+
+
+-- ------------------------------------------------------------
+-- 14. AVANZADA — Revenue por canal de reserva y método de pago
+--     Usa: PIVOT implícito con CASE, múltiples agregaciones
+--     Objetivo: Entender qué canales generan más ingresos y
+--     qué métodos de pago prefieren los clientes de cada canal.
+-- ------------------------------------------------------------
+SELECT
+    r.canal_reserva,
+    COUNT(DISTINCT r.id_reserva)                     AS total_reservas,
+    SUM(f.monto_total)                               AS facturado_total,
+    ROUND(AVG(f.monto_total), 2)                     AS ticket_promedio,
+    SUM(CASE WHEN p.metodo_pago = 'tarjeta'       THEN p.monto ELSE 0 END) AS pagado_tarjeta,
+    SUM(CASE WHEN p.metodo_pago = 'transferencia' THEN p.monto ELSE 0 END) AS pagado_transferencia,
+    SUM(CASE WHEN p.metodo_pago = 'efectivo'      THEN p.monto ELSE 0 END) AS pagado_efectivo,
+    SUM(CASE WHEN p.metodo_pago = 'OTA'           THEN p.monto ELSE 0 END) AS pagado_ota,
+    SUM(CASE WHEN p.metodo_pago = 'web'           THEN p.monto ELSE 0 END) AS pagado_web,
+    SUM(CASE WHEN p.metodo_pago = 'agencia'       THEN p.monto ELSE 0 END) AS pagado_agencia
+FROM reservas  r
+INNER JOIN facturas f ON r.id_reserva  = f.id_reserva
+INNER JOIN pagos    p ON f.id_factura  = p.id_factura
+GROUP BY r.canal_reserva
+ORDER BY facturado_total DESC;
+
+
+-- ------------------------------------------------------------
+-- 15. AVANZADA — Duración de estadía vs gasto en servicios
+--     Usa: Subconsulta correlacionada, ratios calculados
+--     Objetivo: Ver si estadías más largas consumen más servicios,
+--     para diseñar paquetes de servicios por número de noches.
+-- ------------------------------------------------------------
+SELECT
+    r.id_reserva,
+    COALESCE(h.nombres + ' ' + h.apellidos, h.nombres) AS huesped,
+    DATEDIFF(DAY, r.fecha_entrada, r.fecha_salida)      AS noches,
+    rh.precio_total                                     AS costo_habitacion,
+    ISNULL((
+        SELECT SUM(cs.monto_total)
+        FROM consumos_servicios cs
+        WHERE cs.id_reserva = r.id_reserva
+    ), 0)                                               AS gasto_servicios,
+    ROUND(
+        ISNULL((SELECT SUM(cs.monto_total) FROM consumos_servicios cs
+                WHERE cs.id_reserva = r.id_reserva), 0)
+        / NULLIF(DATEDIFF(DAY, r.fecha_entrada, r.fecha_salida), 0)
+    , 2)                                                AS gasto_servicios_por_noche,
+    ROUND(
+        100.0 * ISNULL((SELECT SUM(cs.monto_total) FROM consumos_servicios cs
+                        WHERE cs.id_reserva = r.id_reserva), 0)
+        / NULLIF(rh.precio_total, 0)
+    , 1)                                                AS pct_servicios_vs_habitacion
+FROM reservas r
+INNER JOIN huespedes             h  ON r.id_huesped   = h.id_huesped
+INNER JOIN reserva_habitaciones  rh ON r.id_reserva   = rh.id_reserva
+WHERE r.estado = 'confirmada'
+ORDER BY gasto_servicios_por_noche DESC;
+
+
+-- ------------------------------------------------------------
+-- 16. EXPERTA — Dashboard ejecutivo mensual con variación MoM
+--     Usa: LAG(), CTEs, variación porcentual mes a mes
+--     Objetivo: Resumen ejecutivo de KPIs mensuales con
+--     comparativa respecto al mes anterior (Month-over-Month).
+-- ------------------------------------------------------------
+WITH metricas_mes AS (
+    SELECT
+        FORMAT(r.fecha_entrada, 'yyyy-MM')      AS mes,
+        COUNT(DISTINCT r.id_reserva)            AS reservas,
+        SUM(DATEDIFF(DAY, r.fecha_entrada,
+                     r.fecha_salida))           AS noches_totales,
+        SUM(f.monto_total)                      AS revenue,
+        ROUND(AVG(f.monto_total), 2)            AS ticket_promedio,
+        COUNT(DISTINCT r.id_huesped)            AS huespedes_unicos
+    FROM reservas  r
+    INNER JOIN facturas f ON r.id_reserva = f.id_reserva
+    WHERE r.estado = 'confirmada'
+    GROUP BY FORMAT(r.fecha_entrada, 'yyyy-MM')
+),
+con_lag AS (
+    SELECT *,
+        LAG(revenue, 1)    OVER (ORDER BY mes) AS revenue_mes_anterior,
+        LAG(reservas, 1)   OVER (ORDER BY mes) AS reservas_mes_anterior
+    FROM metricas_mes
+)
+SELECT
+    mes,
+    reservas,
+    noches_totales,
+    huespedes_unicos,
+    revenue,
+    ticket_promedio,
+    ROUND(100.0 * (revenue - revenue_mes_anterior)
+          / NULLIF(revenue_mes_anterior, 0), 1)   AS variacion_revenue_pct,
+    ROUND(100.0 * (reservas - reservas_mes_anterior)
+          / NULLIF(reservas_mes_anterior, 0), 1)  AS variacion_reservas_pct,
+    CASE
+        WHEN revenue > revenue_mes_anterior THEN 'CRECIMIENTO'
+        WHEN revenue < revenue_mes_anterior THEN 'DECRECIMIENTO'
+        ELSE 'ESTABLE'
+    END                                           AS tendencia
+FROM con_lag
+ORDER BY mes;
+
+
+-- ------------------------------------------------------------
+-- 17. EXPERTA — Detección de habitaciones sin reservas (análisis de baja demanda)
+--     Usa: LEFT JOIN con IS NULL, subconsultas, DATEDIFF
+--     Objetivo: Encontrar habitaciones que nunca han sido
+--     reservadas o llevan más de 60 días sin ocuparse, para
+--     tomar decisiones de mantenimiento o repricing.
+-- ------------------------------------------------------------
+WITH ultima_ocupacion AS (
+    SELECT
+        rh.id_habitacion,
+        MAX(r.fecha_salida)              AS ultima_salida,
+        COUNT(rh.id_reserva_habitacion)  AS total_reservas_historicas
+    FROM reserva_habitaciones rh
+    INNER JOIN reservas r ON rh.id_reserva = r.id_reserva
+    WHERE r.estado = 'confirmada'
+    GROUP BY rh.id_habitacion
+)
+SELECT
+    ha.id_habitacion,
+    ha.numero_habitacion,
+    ha.piso,
+    ha.estado,
+    ho.nombre                                AS hotel,
+    ho.ciudad,
+    th.nombre                                AS tipo,
+    th.precio_base_noche,
+    ISNULL(uo.total_reservas_historicas, 0)  AS veces_reservada,
+    uo.ultima_salida,
+    DATEDIFF(DAY, uo.ultima_salida, GETDATE()) AS dias_sin_ocupar,
+    CASE
+        WHEN uo.id_habitacion IS NULL
+             THEN 'NUNCA RESERVADA'
+        WHEN DATEDIFF(DAY, uo.ultima_salida, GETDATE()) > 60
+             THEN 'SIN ACTIVIDAD +60 DÍAS'
+        ELSE 'ACTIVA'
+    END                                      AS diagnostico
+FROM habitaciones        ha
+INNER JOIN hoteles          ho ON ha.id_hotel           = ho.id_hotel
+INNER JOIN tipos_habitacion th ON ha.id_tipo_habitacion = th.id_tipo_habitacion
+LEFT  JOIN ultima_ocupacion uo ON ha.id_habitacion      = uo.id_habitacion
+ORDER BY diagnostico DESC, dias_sin_ocupar DESC;
+
+
+-- ------------------------------------------------------------
+-- 18. EXPERTA — Análisis de rentabilidad neta por hotel
+--     Usa: CTEs múltiples, FULL OUTER JOIN, ratios complejos
+--     Objetivo: Calcular revenue, cobros, saldo pendiente y
+--     tasa de cobranza efectiva por hotel para auditoría.
+-- ------------------------------------------------------------
+WITH revenue_hotel AS (
+    SELECT
+        ho.id_hotel,
+        ho.nombre                            AS hotel,
+        ho.ciudad,
+        SUM(f.monto_total)                   AS total_facturado,
+        SUM(f.subtotal_habitacion)           AS facturado_habitacion,
+        SUM(f.subtotal_servicios)            AS facturado_servicios,
+        SUM(f.descuentos)                    AS descuentos_otorgados,
+        SUM(f.igv)                           AS igv_generado
+    FROM facturas              f
+    INNER JOIN reservas          r  ON f.id_reserva  = r.id_reserva
+    INNER JOIN reserva_habitaciones rh ON r.id_reserva = rh.id_reserva
+    INNER JOIN habitaciones      ha ON rh.id_habitacion = ha.id_habitacion
+    INNER JOIN hoteles           ho ON ha.id_hotel      = ho.id_hotel
+    GROUP BY ho.id_hotel, ho.nombre, ho.ciudad
+),
+cobros_hotel AS (
+    SELECT
+        ho.id_hotel,
+        SUM(p.monto)                         AS total_cobrado
+    FROM pagos                 p
+    INNER JOIN facturas          f  ON p.id_factura   = f.id_factura
+    INNER JOIN reservas          r  ON f.id_reserva   = r.id_reserva
+    INNER JOIN reserva_habitaciones rh ON r.id_reserva = rh.id_reserva
+    INNER JOIN habitaciones      ha ON rh.id_habitacion = ha.id_habitacion
+    INNER JOIN hoteles           ho ON ha.id_hotel      = ho.id_hotel
+    GROUP BY ho.id_hotel
+)
+SELECT
+    rv.hotel,
+    rv.ciudad,
+    rv.total_facturado,
+    rv.facturado_habitacion,
+    rv.facturado_servicios,
+    rv.descuentos_otorgados,
+    rv.igv_generado,
+    ISNULL(cb.total_cobrado, 0)                      AS total_cobrado,
+    rv.total_facturado - ISNULL(cb.total_cobrado, 0) AS saldo_pendiente,
+    ROUND(100.0 * ISNULL(cb.total_cobrado, 0)
+          / NULLIF(rv.total_facturado, 0), 1)         AS tasa_cobranza_pct
+FROM revenue_hotel rv
+LEFT JOIN cobros_hotel cb ON rv.id_hotel = cb.id_hotel
+ORDER BY rv.total_facturado DESC;
+
+
+-- ------------------------------------------------------------
+-- 19. EXPERTA — Predicción de ocupación futura (próximos 30 días)
+--     Usa: GENERATE_SERIES implícito con CTE recursivo,
+--          CROSS JOIN, análisis de disponibilidad día a día
+--     Objetivo: Proyectar la ocupación diaria de cada hotel
+--     para las próximas 4 semanas y detectar días con baja
+--     ocupación donde se puede incentivar reservas.
+-- ------------------------------------------------------------
+WITH calendario AS (
+    -- Genera los próximos 30 días desde hoy
+    SELECT CAST(GETDATE() AS DATE) AS fecha
+    UNION ALL
+    SELECT DATEADD(DAY, 1, fecha)
+    FROM calendario
+    WHERE fecha < DATEADD(DAY, 29, CAST(GETDATE() AS DATE))
+),
+capacidad_hotel AS (
+    SELECT
+        ho.id_hotel,
+        ho.nombre                            AS hotel,
+        ho.ciudad,
+        COUNT(ha.id_habitacion)              AS total_habitaciones
+    FROM hoteles    ho
+    INNER JOIN habitaciones ha ON ho.id_hotel = ha.id_hotel
+    WHERE ha.estado <> 'mantenimiento'
+    GROUP BY ho.id_hotel, ho.nombre, ho.ciudad
+),
+ocupacion_dia AS (
+    SELECT
+        ha.id_hotel,
+        cal.fecha,
+        COUNT(DISTINCT rh.id_habitacion)     AS habitaciones_ocupadas
+    FROM calendario          cal
+    CROSS JOIN habitaciones  ha
+    INNER JOIN reserva_habitaciones rh ON ha.id_habitacion = rh.id_habitacion
+    INNER JOIN reservas              r ON rh.id_reserva    = r.id_reserva
+    WHERE r.estado = 'confirmada'
+      AND cal.fecha BETWEEN r.fecha_entrada AND DATEADD(DAY,-1, r.fecha_salida)
+    GROUP BY ha.id_hotel, cal.fecha
+)
+SELECT
+    cal.fecha,
+    ch.hotel,
+    ch.ciudad,
+    ch.total_habitaciones,
+    ISNULL(od.habitaciones_ocupadas, 0)          AS ocupadas,
+    ch.total_habitaciones
+    - ISNULL(od.habitaciones_ocupadas, 0)        AS disponibles,
+    ROUND(100.0 * ISNULL(od.habitaciones_ocupadas, 0)
+          / NULLIF(ch.total_habitaciones, 0), 1)  AS pct_ocupacion,
+    CASE
+        WHEN ROUND(100.0 * ISNULL(od.habitaciones_ocupadas,0)
+             / NULLIF(ch.total_habitaciones,0),1) >= 80 THEN 'ALTA DEMANDA'
+        WHEN ROUND(100.0 * ISNULL(od.habitaciones_ocupadas,0)
+             / NULLIF(ch.total_habitaciones,0),1) >= 40 THEN 'DEMANDA MEDIA'
+        ELSE 'BAJA DEMANDA — PROMOCIONAR'
+    END                                           AS nivel_demanda
+FROM calendario          cal
+CROSS JOIN capacidad_hotel ch
+LEFT  JOIN ocupacion_dia   od ON ch.id_hotel = od.id_hotel
+                              AND cal.fecha   = od.fecha
+ORDER BY cal.fecha, ch.hotel
+OPTION (MAXRECURSION 35);
+
+
+-- ------------------------------------------------------------
+-- 20. EXPERTA — Reporte integral de huésped VIP (ficha completa)
+--     Usa: PIVOT, FOR XML PATH (concatenación), múltiples CTEs,
+--          Window functions, subquery escalar
+--     Objetivo: Generar la ficha completa de un huésped VIP
+--     con historial de reservas, servicios favoritos, puntaje
+--     de satisfacción y saldo pendiente de pago.
+--     (Parametrizable: reemplazar @id_huesped por el ID deseado)
+-- ------------------------------------------------------------
+DECLARE @id_huesped INT = 2;   -- Cambiar por el ID del huésped a consultar
+
+WITH historial_reservas AS (
+    SELECT
+        r.id_reserva,
+        r.fecha_entrada,
+        r.fecha_salida,
+        DATEDIFF(DAY, r.fecha_entrada, r.fecha_salida)  AS noches,
+        r.canal_reserva,
+        r.estado,
+        ho.nombre                                        AS hotel,
+        ho.ciudad,
+        th.nombre                                        AS tipo_habitacion,
+        rh.tarifa_noche,
+        rh.precio_total                                  AS costo_habitacion,
+        ISNULL(f.monto_total, 0)                         AS total_factura,
+        ISNULL(
+            (SELECT SUM(p.monto) FROM pagos p
+             WHERE p.id_factura = f.id_factura), 0)      AS total_pagado,
+        ISNULL(f.monto_total, 0) - ISNULL(
+            (SELECT SUM(p.monto) FROM pagos p
+             WHERE p.id_factura = f.id_factura), 0)      AS saldo_pendiente,
+        ISNULL(
+            (SELECT CAST(sa.limpieza_puntaje + sa.atencion_puntaje
+                    + sa.instalaciones_puntaje AS FLOAT) / 3
+             FROM satisfaccion sa
+             WHERE sa.id_reserva = r.id_reserva), NULL)  AS puntaje_satisfaccion
+    FROM reservas              r
+    INNER JOIN reserva_habitaciones rh ON r.id_reserva   = rh.id_reserva
+    INNER JOIN habitaciones        ha ON rh.id_habitacion = ha.id_habitacion
+    INNER JOIN hoteles             ho ON ha.id_hotel      = ho.id_hotel
+    INNER JOIN tipos_habitacion    th ON ha.id_tipo_habitacion = th.id_tipo_habitacion
+    LEFT  JOIN facturas             f ON r.id_reserva     = f.id_reserva
+    WHERE r.id_huesped = @id_huesped
+),
+servicios_favoritos AS (
+    SELECT TOP 3
+        s.nombre                         AS servicio,
+        s.categoria,
+        COUNT(cs.id_consumo)             AS veces_consumido,
+        SUM(cs.monto_total)              AS gasto_total_servicio
+    FROM consumos_servicios cs
+    INNER JOIN servicios  s ON cs.id_servicio = s.id_servicio
+    INNER JOIN reservas   r ON cs.id_reserva  = r.id_reserva
+    WHERE r.id_huesped = @id_huesped
+    GROUP BY s.nombre, s.categoria
+    ORDER BY veces_consumido DESC, gasto_total_servicio DESC
+),
+resumen AS (
+    SELECT
+        COUNT(id_reserva)                AS total_reservas,
+        SUM(noches)                      AS total_noches,
+        SUM(total_factura)               AS gasto_total,
+        SUM(saldo_pendiente)             AS deuda_total,
+        ROUND(AVG(puntaje_satisfaccion), 2) AS satisfaccion_promedio,
+        MIN(fecha_entrada)               AS primera_visita,
+        MAX(fecha_entrada)               AS ultima_visita
+    FROM historial_reservas
+    WHERE estado = 'confirmada'
+)
+
+-- Resumen del huésped
+SELECT
+    '=== FICHA HUÉSPED VIP ===' AS seccion,
+    (SELECT COALESCE(nombres + ' ' + apellidos, nombres)
+     FROM huespedes WHERE id_huesped = @id_huesped) AS nombre_completo,
+    (SELECT email      FROM huespedes WHERE id_huesped = @id_huesped) AS email,
+    (SELECT telefono   FROM huespedes WHERE id_huesped = @id_huesped) AS telefono,
+    (SELECT nacionalidad FROM huespedes WHERE id_huesped = @id_huesped) AS nacionalidad,
+    r.total_reservas,
+    r.total_noches,
+    r.gasto_total,
+    r.deuda_total,
+    r.satisfaccion_promedio,
+    r.primera_visita,
+    r.ultima_visita,
+    DATEDIFF(DAY, r.ultima_visita, GETDATE()) AS dias_desde_ultima_visita
+FROM resumen r;
+
+-- Historial detallado
+SELECT
+    '=== HISTORIAL DE RESERVAS ===' AS seccion,
+    id_reserva,
+    hotel,
+    ciudad,
+    tipo_habitacion,
+    fecha_entrada,
+    fecha_salida,
+    noches,
+    canal_reserva,
+    estado,
+    costo_habitacion,
+    total_factura,
+    total_pagado,
+    saldo_pendiente,
+    ROUND(puntaje_satisfaccion, 2)   AS satisfaccion
+FROM historial_reservas
+ORDER BY fecha_entrada DESC;
+
+-- Servicios más consumidos
+SELECT
+    '=== TOP 3 SERVICIOS FAVORITOS ===' AS seccion,
+    servicio,
+    categoria,
+    veces_consumido,
+    gasto_total_servicio
+FROM servicios_favoritos;
+
+
+-- ============================================================
+-- FIN DE LAS 20 CONSULTAS
+-- ============================================================
