@@ -1,1 +1,327 @@
+-- ============================================================
+--  SCRIPT OLTP — INSERTS
+--  Sistema de Gestión de Reservas y Operaciones Hoteleras
+--  HospedaPerú
+--  Base: SQL Server
+-- ============================================================
 
+-- ============================================================
+--  TABLAS INDEPENDIENTES (catálogos)  — mínimo 5 registros c/u
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- 1. HOTELES
+-- ------------------------------------------------------------
+INSERT INTO hoteles (nombre, ciudad, categoria_estrellas, direccion, capacidad_total) VALUES
+('HospedaPerú Lima Centro',    'Lima',     4, 'Av. Larco 1200, Miraflores',         120),
+('HospedaPerú Cusco Imperial', 'Cusco',    4, 'Calle Plateros 320, Cusco',            80),
+('HospedaPerú Arequipa Plaza', 'Arequipa', 3, 'Av. Santa Catalina 450, Arequipa',     60),
+('HospedaPerú Puno Lago',      'Puno',     3, 'Jr. Libertad 890, Puno',               50),
+('HospedaPerú Lima Norte',     'Lima',     3, 'Av. Alfredo Benavides 3400, Surco',    90);
+
+-- ------------------------------------------------------------
+-- 2. TIPOS DE HABITACIÓN
+-- ------------------------------------------------------------
+INSERT INTO tipos_habitacion (id_hotel, nombre, descripcion, precio_base_noche, capacidad_max_personas, amenidades) VALUES
+(1, 'Simple',   'Habitación individual con cama queen',        180.00, 1, 'WiFi, TV, AC, minibar'),
+(1, 'Doble',    'Habitación con dos camas twin',               260.00, 2, 'WiFi, TV, AC, minibar'),
+(1, 'Suite',    'Suite ejecutiva con sala y vista al mar',     520.00, 2, 'WiFi, TV 4K, AC, jacuzzi, minibar'),
+(2, 'Simple',   'Habitación colonial vista al patio',         150.00, 1, 'WiFi, TV, calefacción'),
+(2, 'Doble',    'Habitación doble con vista al jardín',       220.00, 2, 'WiFi, TV, calefacción'),
+(2, 'Familiar', 'Habitación amplia para hasta 4 personas',    380.00, 4, 'WiFi, TV, calefacción, cuna disponible'),
+(3, 'Simple',   'Habitación estándar céntrica',               120.00, 1, 'WiFi, TV'),
+(3, 'Doble',    'Habitación doble con balcón',                190.00, 2, 'WiFi, TV, balcón'),
+(4, 'Simple',   'Habitación con vista al lago Titicaca',      140.00, 1, 'WiFi, TV, calefacción'),
+(4, 'Doble',    'Habitación doble con vista panorámica',      210.00, 2, 'WiFi, TV, calefacción');
+
+-- ------------------------------------------------------------
+-- 3. HABITACIONES
+-- ------------------------------------------------------------
+INSERT INTO habitaciones (id_hotel, id_tipo_habitacion, numero_habitacion, piso, estado) VALUES
+-- Hotel Lima Centro (id_hotel=1)
+(1, 1, '101', 1, 'disponible'),
+(1, 1, '102', 1, 'disponible'),
+(1, 2, '201', 2, 'disponible'),
+(1, 2, '202', 2, 'ocupada'),
+(1, 3, '501', 5, 'disponible'),
+(1, 3, '502', 5, 'mantenimiento'),
+-- Hotel Cusco (id_hotel=2)
+(2, 4, '101', 1, 'disponible'),
+(2, 5, '201', 2, 'disponible'),
+(2, 5, '202', 2, 'ocupada'),
+(2, 6, '301', 3, 'disponible'),
+-- Hotel Arequipa (id_hotel=3)
+(3, 7, '101', 1, 'disponible'),
+(3, 8, '201', 2, 'disponible'),
+-- Hotel Puno (id_hotel=4)
+(4, 9, '101', 1, 'disponible'),
+(4, 10,'201', 2, 'disponible');
+
+-- ------------------------------------------------------------
+-- 4. SERVICIOS
+-- ------------------------------------------------------------
+INSERT INTO servicios (nombre, categoria, descripcion, precio_unitario) VALUES
+('Desayuno buffet',       'Restaurante',   'Desayuno completo con buffet internacional',   35.00),
+('Almuerzo menú',         'Restaurante',   'Almuerzo de 3 tiempos en restaurante del hotel',55.00),
+('Cena gourmet',          'Restaurante',   'Cena a la carta con chef especializado',        80.00),
+('Lavandería express',    'Lavandería',    'Lavado y planchado en menos de 4 horas',        25.00),
+('Lavandería regular',    'Lavandería',    'Lavado y planchado en 24 horas',                15.00),
+('Sesión de spa',         'Spa',           'Masaje relajante de 60 minutos',                90.00),
+('Tratamiento facial',    'Spa',           'Limpieza facial profunda',                      70.00),
+('Estacionamiento',       'Estacionamiento','Estacionamiento por día en cochera techada',   20.00),
+('Tour ciudad',           'Tours',         'City tour guiado de medio día',                 60.00),
+('Tour Machu Picchu',     'Tours',         'Tour de día completo a Machu Picchu',          180.00),
+('Minibar consumo',       'Minibar',       'Consumo de productos del minibar',              variable := NULL),
+('Transfer aeropuerto',   'Traslado',      'Traslado privado aeropuerto - hotel',           50.00);
+
+-- Corrección: precio variable para minibar
+UPDATE servicios SET precio_unitario = 0.00 WHERE nombre = 'Minibar consumo';
+
+-- ------------------------------------------------------------
+-- 5. EMPLEADOS
+-- ------------------------------------------------------------
+INSERT INTO empleados (nombres, apellidos, cargo, email, telefono) VALUES
+('Carlos',   'Mamani Quispe',   'Recepcionista',      'c.mamani@hospedaperu.com',    '987654321'),
+('Lucía',    'Torres Salas',    'Recepcionista',      'l.torres@hospedaperu.com',    '987654322'),
+('Roberto',  'Flores Vargas',   'Jefe de Recepción',  'r.flores@hospedaperu.com',   '987654323'),
+('Andrea',   'Chávez Lima',     'Recepcionista',      'a.chavez@hospedaperu.com',    '987654324'),
+('Miguel',   'Huanca Pari',     'Conserje',           'm.huanca@hospedaperu.com',    '987654325'),
+('Sandra',   'Ríos Castro',     'Supervisora',        's.rios@hospedaperu.com',      '987654326'),
+('Jorge',    'Condori Apaza',   'Recepcionista',      'j.condori@hospedaperu.com',   '987654327');
+
+
+-- ============================================================
+--  TABLAS MAESTRAS — HUÉSPEDES  (mínimo 10 para sostener transaccionales)
+-- ============================================================
+
+INSERT INTO huespedes (tipo_huesped, tipo_documento, numero_documento, nombres, apellidos,
+                       fecha_nacimiento, nacionalidad, email, telefono, preferencias) VALUES
+('N', 'DNI', '45231876', 'Alejandro',  'Pérez Gómez',     '1985-03-12', 'Peruana',   'alejandro.perez@gmail.com',   '991001001', 'Piso alto, vista al mar'),
+('N', 'DNI', '38761290', 'Valeria',    'Ramos Torres',    '1990-07-24', 'Peruana',   'valeria.ramos@gmail.com',     '991001002', 'Cama king, sin ruido'),
+('N', 'PAS', 'US123456', 'John',       'Smith Williams',  '1978-11-05', 'Americana', 'john.smith@outlook.com',      '991001003', 'Desayuno incluido'),
+('N', 'PAS', 'AR987654', 'Luciana',    'Martínez López',  '1995-02-18', 'Argentina', 'luciana.mtz@hotmail.com',     '991001004', 'Habitación tranquila'),
+('N', 'DNI', '72345618', 'Brian',      'Condori Mamani',  '2000-09-30', 'Peruana',   'brian.condori@gmail.com',     '991001005', 'Sin preferencia'),
+('N', 'DNI', '60123984', 'Patricia',   'Salas Huanca',    '1972-06-14', 'Peruana',   'patricia.salas@gmail.com',    '991001006', 'Piso bajo, accesible'),
+('N', 'PAS', 'BR654321', 'Rafael',     'Oliveira Santos', '1988-04-22', 'Brasileña', 'rafael.oli@gmail.com',        '991001007', 'Cuna para bebé'),
+('N', 'DNI', '51876432', 'Carmen',     'Quispe Apaza',    '1965-12-01', 'Peruana',   'carmen.quispe@gmail.com',     '991001008', 'Habitación caliente'),
+('E', 'RUC', '20501234567', 'Minera Andina SAC', NULL,   NULL,          'Peruana',   'reservas@mineraandina.com',   '014501234', 'Facturas a nombre empresa'),
+('E', 'RUC', '20609876543', 'Tech Solutions Perú', NULL, NULL,          'Peruana',   'viajes@techsolutions.pe',     '014509876', 'Habitaciones corporativas'),
+('N', 'DNI', '47123890', 'Diego',      'Vargas Fuentes',  '1993-08-17', 'Peruana',   'diego.vargas@gmail.com',      '991001010', 'Almohada extra'),
+('N', 'PAS', 'CO321456', 'Isabela',    'García Moreno',   '1982-01-29', 'Colombiana','isabela.garcia@gmail.com',    '991001011', 'Vista a la plaza');
+
+
+-- ============================================================
+--  TABLAS TRANSACCIONALES — mínimo 20 registros c/u
+-- ============================================================
+
+-- ------------------------------------------------------------
+-- 6. RESERVAS  (25 registros)
+-- ------------------------------------------------------------
+INSERT INTO reservas (id_huesped, fecha_creacion, fecha_entrada, fecha_salida,
+                      nro_personas, canal_reserva, estado) VALUES
+-- Reservas pasadas (históricas)
+(1,  '2026-01-05', '2026-01-10', '2026-01-13', 1, 'web',      'confirmada'),
+(2,  '2026-01-08', '2026-01-15', '2026-01-18', 2, 'telefono', 'confirmada'),
+(3,  '2026-01-20', '2026-02-01', '2026-02-05', 1, 'OTA',      'confirmada'),
+(4,  '2026-02-01', '2026-02-10', '2026-02-12', 2, 'agencia',  'confirmada'),
+(5,  '2026-02-14', '2026-02-20', '2026-02-22', 1, 'web',      'confirmada'),
+(6,  '2026-02-28', '2026-03-05', '2026-03-08', 2, 'telefono', 'confirmada'),
+(7,  '2026-03-01', '2026-03-10', '2026-03-15', 4, 'agencia',  'confirmada'),
+(8,  '2026-03-12', '2026-03-20', '2026-03-22', 1, 'web',      'confirmada'),
+(9,  '2026-03-15', '2026-04-01', '2026-04-05', 2, 'OTA',      'confirmada'),
+(10, '2026-03-20', '2026-04-10', '2026-04-15', 3, 'agencia',  'confirmada'),
+-- Reservas con otros estados
+(1,  '2026-04-01', '2026-04-20', '2026-04-22', 1, 'web',      'cancelada'),
+(3,  '2026-04-05', '2026-05-01', '2026-05-03', 1, 'OTA',      'no-show'),
+(11, '2026-04-10', '2026-04-25', '2026-04-28', 2, 'web',      'confirmada'),
+(12, '2026-04-12', '2026-05-05', '2026-05-08', 1, 'telefono', 'confirmada'),
+-- Reservas activas / recientes
+(2,  '2026-05-01', '2026-06-10', '2026-06-14', 2, 'web',      'confirmada'),
+(4,  '2026-05-10', '2026-06-15', '2026-06-18', 2, 'agencia',  'confirmada'),
+(5,  '2026-05-12', '2026-06-17', '2026-06-20', 1, 'OTA',      'confirmada'),
+(6,  '2026-05-15', '2026-06-20', '2026-06-23', 2, 'web',      'confirmada'),
+(7,  '2026-05-20', '2026-06-25', '2026-06-30', 4, 'agencia',  'confirmada'),
+(8,  '2026-05-22', '2026-07-01', '2026-07-04', 1, 'telefono', 'confirmada'),
+(9,  '2026-05-25', '2026-07-05', '2026-07-10', 2, 'OTA',      'confirmada'),
+(10, '2026-05-28', '2026-07-12', '2026-07-15', 3, 'agencia',  'confirmada'),
+(11, '2026-06-01', '2026-07-20', '2026-07-22', 1, 'web',      'confirmada'),
+(12, '2026-06-05', '2026-07-25', '2026-07-28', 1, 'web',      'confirmada'),
+(1,  '2026-06-10', '2026-08-01', '2026-08-05', 1, 'web',      'confirmada');
+
+-- ------------------------------------------------------------
+-- 7. RESERVA_HABITACIONES  (25 registros)
+-- ------------------------------------------------------------
+INSERT INTO reserva_habitaciones (id_reserva, id_habitacion, tarifa_noche,
+                                   nro_noches, precio_total, estado_habitacion) VALUES
+(1,  1,  180.00, 3,  540.00,  'liberada'),
+(2,  3,  260.00, 3,  780.00,  'liberada'),
+(3,  7,  150.00, 4,  600.00,  'liberada'),
+(4,  8,  220.00, 2,  440.00,  'liberada'),
+(5,  2,  180.00, 2,  360.00,  'liberada'),
+(6,  3,  260.00, 3,  780.00,  'liberada'),
+(7,  10, 380.00, 5, 1900.00,  'liberada'),
+(8,  9,  140.00, 2,  280.00,  'liberada'),
+(9,  8,  220.00, 4,  880.00,  'liberada'),
+(10, 11, 120.00, 5,  600.00,  'liberada'),
+(11, 1,  180.00, 2,  360.00,  'liberada'),  -- cancelada
+(12, 7,  150.00, 2,  300.00,  'liberada'),  -- no-show
+(13, 4,  260.00, 3,  780.00,  'liberada'),
+(14, 2,  180.00, 3,  540.00,  'liberada'),
+(15, 3,  260.00, 4, 1040.00,  'asignada'),
+(16, 8,  220.00, 3,  660.00,  'asignada'),
+(17, 1,  180.00, 3,  540.00,  'asignada'),
+(18, 4,  260.00, 3,  780.00,  'asignada'),
+(19, 10, 380.00, 5, 1900.00,  'asignada'),
+(20, 2,  180.00, 3,  540.00,  'asignada'),
+(21, 8,  220.00, 5, 1100.00,  'asignada'),
+(22, 11, 120.00, 3,  360.00,  'asignada'),
+(23, 5,  520.00, 2, 1040.00,  'asignada'),
+(24, 1,  180.00, 3,  540.00,  'asignada'),
+(25, 5,  520.00, 4, 2080.00,  'asignada');
+
+-- ------------------------------------------------------------
+-- 8. CHECK_IN_OUT  (20 registros — solo reservas confirmadas con fechas pasadas)
+-- ------------------------------------------------------------
+INSERT INTO check_in_out (id_reserva, id_empleado, fecha_hora_checkin, fecha_hora_checkout,
+                           documento_presentado, observaciones) VALUES
+(1,  1, '2026-01-10 14:05:00', '2026-01-13 11:30:00', 'DNI 45231876',   'Sin novedades'),
+(2,  2, '2026-01-15 13:50:00', '2026-01-18 12:00:00', 'DNI 38761290',   'Solicitó almohada extra'),
+(3,  1, '2026-02-01 15:10:00', '2026-02-05 11:00:00', 'PAS US123456',   'Huésped extranjero, idioma inglés'),
+(4,  3, '2026-02-10 14:30:00', '2026-02-12 12:15:00', 'PAS AR987654',   'Sin novedades'),
+(5,  2, '2026-02-20 16:00:00', '2026-02-22 11:45:00', 'DNI 72345618',   'Late check-out solicitado'),
+(6,  4, '2026-03-05 13:20:00', '2026-03-08 12:00:00', 'DNI 60123984',   'Habitación accesible requerida'),
+(7,  1, '2026-03-10 14:00:00', '2026-03-15 11:30:00', 'PAS BR654321',   'Cuna instalada en habitación'),
+(8,  5, '2026-03-20 15:30:00', '2026-03-22 12:00:00', 'DNI 51876432',   'Sin novedades'),
+(9,  2, '2026-04-01 14:10:00', '2026-04-05 11:00:00', 'RUC 20501234567','Factura a nombre de empresa'),
+(10, 3, '2026-04-10 13:45:00', '2026-04-15 12:30:00', 'RUC 20609876543','Grupo corporativo, 3 habitaciones'),
+(13, 1, '2026-04-25 14:00:00', '2026-04-28 12:00:00', 'DNI 47123890',   'Sin novedades'),
+(14, 4, '2026-05-05 15:00:00', '2026-05-08 11:30:00', 'PAS CO321456',   'Turista colombiana'),
+(15, 2, '2026-06-10 14:15:00', NULL,                  'DNI 38761290',   'Check-out pendiente'),
+(16, 1, '2026-06-15 13:30:00', NULL,                  'PAS AR987654',   'Check-out pendiente'),
+(17, 3, '2026-06-17 14:00:00', NULL,                  'DNI 72345618',   'Check-out pendiente'),
+(18, 2, '2026-06-20 15:10:00', NULL,                  'DNI 60123984',   'Check-out pendiente'),
+(19, 5, '2026-06-25 14:30:00', NULL,                  'PAS BR654321',   'Familia con niños'),
+(20, 4, '2026-07-01 13:00:00', NULL,                  'DNI 51876432',   'Check-out pendiente'),
+(21, 1, '2026-07-05 14:20:00', NULL,                  'RUC 20501234567','Factura empresa requerida'),
+(22, 3, '2026-07-12 15:00:00', NULL,                  'RUC 20609876543','Grupo corporativo');
+
+-- ------------------------------------------------------------
+-- 9. CONSUMOS_SERVICIOS  (25 registros)
+-- ------------------------------------------------------------
+INSERT INTO consumos_servicios (id_reserva, id_servicio, fecha_consumo,
+                                 cantidad, precio_unitario, monto_total) VALUES
+-- Reservas históricas
+(1,  1, '2026-01-11', 1, 35.00,  35.00),
+(1,  8, '2026-01-11', 1, 20.00,  20.00),
+(2,  1, '2026-01-16', 2, 35.00,  70.00),
+(2,  3, '2026-01-17', 2, 80.00, 160.00),
+(3,  9, '2026-02-02', 1, 60.00,  60.00),
+(4,  1, '2026-02-11', 2, 35.00,  70.00),
+(4,  6, '2026-02-11', 1, 90.00,  90.00),
+(5,  4, '2026-02-21', 1, 25.00,  25.00),
+(6,  1, '2026-03-06', 2, 35.00,  70.00),
+(7,  10,'2026-03-11', 4,180.00, 720.00),
+(7,  1, '2026-03-12', 4, 35.00, 140.00),
+(8,  8, '2026-03-21', 1, 20.00,  20.00),
+(9,  1, '2026-04-02', 2, 35.00,  70.00),
+(9,  2, '2026-04-03', 2, 55.00, 110.00),
+(10, 12,'2026-04-11', 1, 50.00,  50.00),
+-- Reservas activas
+(15, 1, '2026-06-11', 2, 35.00,  70.00),
+(15, 6, '2026-06-12', 1, 90.00,  90.00),
+(16, 1, '2026-06-16', 2, 35.00,  70.00),
+(17, 8, '2026-06-18', 1, 20.00,  20.00),
+(17, 4, '2026-06-19', 1, 25.00,  25.00),
+(18, 3, '2026-06-21', 2, 80.00, 160.00),
+(19, 10,'2026-06-26', 4,180.00, 720.00),
+(19, 1, '2026-06-27', 4, 35.00, 140.00),
+(20, 6, '2026-07-02', 1, 90.00,  90.00),
+(21, 12,'2026-07-06', 1, 50.00,  50.00);
+
+-- ------------------------------------------------------------
+-- 10. FACTURAS  (20 registros)
+-- ------------------------------------------------------------
+INSERT INTO facturas (id_reserva, fecha_emision, subtotal_habitacion,
+                       subtotal_servicios, descuentos, igv, monto_total) VALUES
+(1,  '2026-01-13',  540.00,   55.00,   0.00,  106.20,  701.20),
+(2,  '2026-01-18',  780.00,  230.00,   0.00,  181.80, 1191.80),
+(3,  '2026-02-05',  600.00,   60.00,   0.00,  118.80,  778.80),
+(4,  '2026-02-12',  440.00,  160.00,   0.00,  108.00,  708.00),
+(5,  '2026-02-22',  360.00,   25.00,   0.00,   69.30,  454.30),
+(6,  '2026-03-08',  780.00,   70.00,   0.00,  152.10,  997.10) ,
+(7,  '2026-03-15', 1900.00,  860.00,  95.00,  479.70, 3144.70),
+(8,  '2026-03-22',  280.00,   20.00,   0.00,   54.00,  354.00),
+(9,  '2026-04-05',  880.00,  180.00,   0.00,  194.40, 1274.40),
+(10, '2026-04-15',  600.00,   50.00,  30.00,  111.60,  731.60),
+(13, '2026-04-28',  780.00,    0.00,   0.00,  140.40,  920.40),
+(14, '2026-05-08',  540.00,    0.00,   0.00,   97.20,  637.20),
+(15, '2026-06-14', 1040.00,  160.00,   0.00,  216.00, 1416.00),
+(16, '2026-06-18',  660.00,   70.00,   0.00,  131.40,  861.40),
+(17, '2026-06-20',  540.00,   45.00,   0.00,  105.30,  690.30),
+(18, '2026-06-23',  780.00,  160.00,   0.00,  170.10, 1114.10) ,
+(19, '2026-06-30', 1900.00,  860.00, 190.00,  473.40, 3043.40),
+(20, '2026-07-04',  540.00,   90.00,   0.00,  113.40,  743.40),
+(21, '2026-07-10', 1100.00,   50.00,   0.00,  207.00, 1357.00),
+(22, '2026-07-15',  360.00,    0.00,   0.00,   64.80,  424.80);
+
+-- ------------------------------------------------------------
+-- 11. PAGOS  (25 registros)
+-- ------------------------------------------------------------
+INSERT INTO pagos (id_factura, fecha_pago, monto, metodo_pago, referencia, observaciones) VALUES
+-- Pagos de reservas históricas (pagos únicos o en 2 partes)
+(1,  '2026-01-13',  701.20, 'tarjeta',      'VISA-0012', 'Pago total al checkout'),
+(2,  '2026-01-15',  500.00, 'transferencia','TRF-20160', 'Adelanto al check-in'),
+(2,  '2026-01-18',  691.80, 'tarjeta',      'MAST-0034', 'Saldo al checkout'),
+(3,  '2026-02-05',  778.80, 'efectivo',     NULL,        'Pago total en efectivo'),
+(4,  '2026-02-10',  300.00, 'transferencia','TRF-20234', 'Adelanto reserva'),
+(4,  '2026-02-12',  408.00, 'tarjeta',      'VISA-0098', 'Saldo al checkout'),
+(5,  '2026-02-22',  454.30, 'tarjeta',      'AMEX-0011', 'Pago único'),
+(6,  '2026-03-08',  997.10, 'OTA',          'BOOKING-441','Cobrado por Booking.com'),
+(7,  '2026-03-01', 1000.00, 'transferencia','TRF-20310', 'Adelanto agencia'),
+(7,  '2026-03-15', 2144.70, 'tarjeta',      'VISA-0211', 'Saldo al checkout'),
+(8,  '2026-03-22',  354.00, 'efectivo',     NULL,        'Pago total efectivo'),
+(9,  '2026-04-05', 1274.40, 'tarjeta',      'MAST-0076', 'Factura empresa'),
+(10, '2026-04-15',  731.60, 'transferencia','TRF-20415', 'Pago corporativo'),
+(11, '2026-04-28',  920.40, 'tarjeta',      'VISA-0312', 'Pago único'),
+(12, '2026-05-08',  637.20, 'efectivo',     NULL,        'Pago total'),
+-- Pagos reservas activas (pagos adelantados)
+(13, '2026-06-10',  700.00, 'transferencia','TRF-20610', 'Adelanto al check-in'),
+(14, '2026-06-15',  400.00, 'tarjeta',      'VISA-0401', 'Adelanto al check-in'),
+(15, '2026-06-17',  300.00, 'web',          'PAY-20617', 'Pago online al reservar'),
+(16, '2026-06-20',  500.00, 'transferencia','TRF-20620', 'Adelanto corporativo'),
+(17, '2026-06-25', 1000.00, 'agencia',      'AGN-20625', 'Pago por agencia'),
+(18, '2026-07-01',  400.00, 'tarjeta',      'MAST-0502', 'Adelanto check-in'),
+(19, '2026-07-05',  700.00, 'transferencia','TRF-20705', 'Pago parcial empresa'),
+(20, '2026-07-12',  424.80, 'tarjeta',      'VISA-0601', 'Pago único checkout'),
+(21, '2026-07-15',  600.00, 'OTA',          'EXPEDIA-88','Cobrado por Expedia'),
+(22, '2026-07-15',  300.00, 'transferencia','TRF-20715', 'Adelanto corporativo');
+
+-- ------------------------------------------------------------
+-- 12. SATISFACCION  (20 registros — solo reservas con checkout completado)
+-- ------------------------------------------------------------
+INSERT INTO satisfaccion (id_reserva, limpieza_puntaje, atencion_puntaje,
+                           instalaciones_puntaje, comentarios, clasificacion) VALUES
+(1,  5, 5, 4, 'Excelente atención, cuarto muy limpio. Volvería sin dudarlo.',          'frecuente'),
+(2,  4, 5, 4, 'El personal es muy amable. La habitación un poco pequeña.',            'frecuente'),
+(3,  5, 4, 5, 'Great room with amazing view. Staff very helpful.',                    'nuevo'),
+(4,  4, 4, 4, 'Buena ubicación y limpieza. Precio justo.',                            'nuevo'),
+(5,  3, 4, 3, 'Regular, esperaba más por el precio. El WiFi fallaba.',                'nuevo'),
+(6,  5, 5, 5, 'Todo perfecto, habitación amplia y cómoda. Muy recomendado.',          'VIP'),
+(7,  5, 5, 5, 'Viaje familiar increíble, el hotel superó nuestras expectativas.',     'VIP'),
+(8,  4, 3, 4, 'Limpieza correcta pero el servicio al cuarto tardó mucho.',            'nuevo'),
+(9,  5, 5, 4, 'Excelente para viajes de negocios. Facturación sin problemas.',        'frecuente'),
+(10, 4, 4, 5, 'Instalaciones modernas. El grupo quedó satisfecho.',                   'frecuente'),
+(13, 5, 4, 4, 'Muy buena experiencia. Volvería.',                                     'nuevo'),
+(14, 4, 5, 4, 'El personal habla varios idiomas, muy útil para turistas.',            'nuevo'),
+(15, 5, 5, 5, 'La suite es espectacular. Altamente recomendado.',                     'VIP'),
+(16, 4, 4, 4, 'Buen hotel para el precio. Desayuno muy completo.',                    'frecuente'),
+(17, 3, 4, 3, 'El cuarto olía a humedad. Cambiamos pero el proceso fue lento.',       'nuevo'),
+(18, 5, 5, 4, 'Perfecta combinación de comodidad y precio.',                          'frecuente'),
+(19, 5, 5, 5, 'Viaje de familia inolvidable. Los niños felices.',                     'VIP'),
+(20, 4, 4, 4, 'Todo en orden. Regresaré en mi próximo viaje a Lima.',                 'frecuente'),
+(21, 5, 5, 5, 'Servicio corporativo impecable. La empresa contratará de nuevo.',      'VIP'),
+(22, 4, 3, 4, 'Buena habitación pero el conserje no fue muy atento.',                 'frecuente');
+
+-- ============================================================
+-- FIN DEL SCRIPT
+-- ============================================================
