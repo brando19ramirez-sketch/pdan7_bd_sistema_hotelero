@@ -130,17 +130,4 @@ Tras el check-out, el sistema permite registrar:
 | Mantenimiento | Una habitación en estado "mantenimiento" **no puede ser asignada** a ninguna reserva |
 | Precio dinámico | El precio final puede variar respecto al precio base según temporada, descuentos o convenios corporativos |
 
----
-
-## 🗂️ Estructura del repositorio
-
-```
-📁 DIAGRAMAS/          → Modelo entidad-relación y diagrama relacional
-📁 OLTP/               → Scripts SQL (DDL, DML, procedimientos almacenados)
-📁 COPIAS DE SEGURIDAD/ → Backups de los scripts
-📄 README.md           → Descripción del caso
-```
-
----
-
-*Caso desarrollado como parte del curso de Base de Datos — PDAN7*
+--
